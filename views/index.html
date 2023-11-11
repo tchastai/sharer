@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Uploader un fichier</title>
+</head>
+
+<body>
+    <h1>Uploader un fichier</h1>
+    <input type="file" id="fileInput">
+    <button id="uploadButton">Envoyer</button>
+    <h2>Fichiers téléchargés :</h2>
+    <ul id="fileList">
+    </ul>
+
+    <script>
+        const fileList = document.getElementById("fileList");
+        const fileInput = document.getElementById("fileInput");
+        const uploadButton = document.getElementById("uploadButton");
+
+        function updateFileList() {
+            fetch("/files")
+                .then(response => response.json())
+                .then(data => {
+                    fileList.innerHTML = ""; // Efface la liste actuelle
+                    if (data.Files && data.Files.length > 0) {
+                        data.Files.forEach(file => {
+                            const listItem = document.createElement("li");
+                            const link = document.createElement("a");
+                            link.href = "/view/" + file;
+                            link.innerText = file;
+                            listItem.appendChild(link);
+
+                            // Ajoute un bouton "Supprimer"
+                            const deleteButton = document.createElement("button");
+                            deleteButton.innerText = "Supprimer";
+                            deleteButton.addEventListener("click", () => {
+                                deleteFile(file);
+                            });
+                            listItem.appendChild(deleteButton);
+
+                            fileList.appendChild(listItem);
+                        });
+                    } else {
+                        fileList.innerHTML = "<li>Aucun fichier n'est actuellement disponible.</li>";
+                    }
+                })
+                .catch(error => {
+                    console.error("Erreur lors de la récupération de la liste des fichiers :", error);
+                });
+        }
+
+        // Mettre à jour la liste des fichiers au chargement initial
+        updateFileList();
+
+        // Planifier la mise à jour automatique de la liste des fichiers à intervalles réguliers
+        setInterval(updateFileList, 5000); // Par exemple, toutes les 5 secondes
+
+        // Gérer le téléchargement de fichiers
+        uploadButton.addEventListener("click", () => {
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch("/upload", {
+                    method: "POST",
+                    body: formData,
+                })
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data); // Vous pouvez afficher la réponse, par exemple, dans la console
+                    // Après le téléchargement réussi, mettez à jour la liste des fichiers
+                    updateFileList();
+                    // Réinitialisez l'élément input
+                    fileInput.value = null;
+                })
+                .catch(error => {
+                    console.error("Erreur lors de l'envoi du fichier :", error);
+                });
+        });
+
+        function deleteFile(filename) {
+            fetch("/delete/" + filename, {
+                    method: "DELETE",
+                })
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data); // Vous pouvez afficher la réponse, par exemple, dans la console
+                    // Après la suppression réussie, mettez à jour la liste des fichiers
+                    updateFileList();
+                })
+                .catch(error => {
+                    console.error("Erreur lors de la suppression du fichier :", error);
+                });
+        }
+    </script>
+</body>
+
+</html>
